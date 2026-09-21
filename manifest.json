@@ -1,0 +1,23 @@
+{
+  "name": "PrepSetu AI — Exam Preparation Platform",
+  "short_name": "PrepSetu",
+  "description": "AI-Powered Exam Preparation Platform for National Examinations",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#02040a",
+  "theme_color": "#0047ab",
+  "icons": [
+    {
+      "src": "./logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

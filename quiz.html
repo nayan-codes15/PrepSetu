@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PrepSetu AI | Secured National Exam Simulator</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0047ab">
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- FontAwesome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Confetti JS -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+  :root {
+    --bg-color: #02040A;
+    --glass-bg: rgba(255, 255, 255, 0.04);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --text-main: #FFFFFF;
+    --text-muted: #8B949E;
+    --blue: #0047AB;
+    --orange: #FF8800;
+    --red: #FF3B30;
+    --green: #34C759;
+    --purple: #8A2BE2;
+  }
+  
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg-color);
+    color: var(--text-main);
+    overflow-x: hidden;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Anti-cheat Blur Overlay */
+  #cheatOverlay {
+    position: fixed; inset: 0; background: rgba(2, 4, 10, 0.96); z-index: 99999;
+    backdrop-filter: blur(25px); display: none; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; padding: 20px;
+  }
+  #cheatOverlay i { font-size: 80px; color: var(--red); margin-bottom: 20px; animation: pulse 1s infinite; }
+  #cheatOverlay h1 { font-family: 'Syne'; font-size: 32px; color: var(--red); margin-bottom: 10px; }
+  #cheatOverlay p { font-size: 16px; color: var(--text-main); max-width: 520px; line-height: 1.5; }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+
+  /* Header */
+  .quiz-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 36px; background: rgba(10, 16, 32, 0.85); border-bottom: 1px solid var(--glass-border);
+    backdrop-filter: blur(16px);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; font-family: 'Syne'; font-weight: 700; font-size: 18px; }
+  .timer { font-family: 'Syne'; font-size: 22px; font-weight: 700; color: var(--orange); display: flex; align-items: center; gap: 8px; }
+  .timer.danger { color: var(--red); animation: pulse 0.8s infinite; }
+  
+  .quiz-layout {
+    flex: 1; display: flex; gap: 24px; padding: 24px 36px; max-width: 1400px; margin: 0 auto; width: 100%;
+  }
+
+  .main-quiz-pane { flex: 1; display: flex; flex-direction: column; }
+  .side-palette-pane { width: 300px; display: flex; flex-direction: column; gap: 16px; }
+
+  .question-card {
+    background: var(--glass-bg); border: 1px solid var(--glass-border);
+    border-radius: 20px; padding: 36px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(12px);
+    flex: 1; display: flex; flex-direction: column;
+  }
+  
+  .q-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; color: var(--text-muted); font-size: 13px; font-weight: 600; text-transform: uppercase; }
+  .marking-badge { background: rgba(0,71,171,0.2); border: 1px solid rgba(0,71,171,0.4); color: #93c5fd; padding: 4px 10px; border-radius: 6px; font-size: 12px; }
+  .q-text { font-family: 'Syne'; font-size: 24px; line-height: 1.45; margin-bottom: 26px; font-weight: 600; }
+  
+  .options-grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 30px; }
+  .option {
+    background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border);
+    padding: 16px 20px; border-radius: 12px; cursor: pointer; font-size: 15px;
+    transition: all 0.25s; display: flex; align-items: center; gap: 14px;
+  }
+  .option-letter {
+    width: 32px; height: 32px; background: rgba(255,255,255,0.06); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;
+    flex-shrink: 0;
+  }
+  .option:hover { background: rgba(0,71,171,0.15); border-color: var(--blue); transform: translateX(4px); }
+  .option.selected { background: rgba(0,71,171,0.4); border-color: #3b82f6; box-shadow: 0 0 15px rgba(0,71,171,0.4); }
+  .option.selected .option-letter { background: #3b82f6; color: white; }
+  
+  .footer-actions { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 20px; border-top: 1px solid var(--glass-border); }
+  .btn { padding: 12px 26px; border-radius: 10px; font-weight: 600; cursor: pointer; font-family: 'DM Sans'; border: none; transition: 0.25s; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
+  .btn-outline { background: transparent; border: 1px solid var(--glass-border); color: var(--text-main); }
+  .btn-outline:hover { background: rgba(255,255,255,0.06); }
+  .btn-primary { background: linear-gradient(135deg, var(--orange), #FF5500); color: white; box-shadow: 0 5px 15px rgba(255,136,0,0.3); }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,136,0,0.4); }
+  .btn-mark { background: rgba(138, 43, 226, 0.2); border: 1px solid rgba(138, 43, 226, 0.4); color: #d8b4fe; }
+  .btn-mark.marked { background: var(--purple); color: white; }
+
+  /* Palette Card */
+  .palette-card {
+    background: var(--glass-bg); border: 1px solid var(--glass-border);
+    border-radius: 16px; padding: 20px; backdrop-filter: blur(12px);
+  }
+  .palette-title { font-family: 'Syne'; font-size: 16px; font-weight: 700; margin-bottom: 14px; display: flex; justify-content: space-between; }
+  .palette-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .palette-btn {
+    aspect-ratio: 1; border-radius: 8px; border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.03); color: var(--text-muted); font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px;
+    transition: all 0.2s;
+  }
+  .palette-btn.current { border-color: var(--orange); color: var(--orange); box-shadow: 0 0 10px rgba(255,136,0,0.3); }
+  .palette-btn.answered { background: rgba(52, 199, 89, 0.2); border-color: var(--green); color: var(--green); }
+  .palette-btn.flagged { background: rgba(138, 43, 226, 0.25); border-color: var(--purple); color: #d8b4fe; }
+  
+  .palette-legend { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; font-size: 12px; color: var(--text-muted); }
+  .legend-item { display: flex; align-items: center; gap: 8px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  /* Initial Start Screen */
+  #startScreen {
+    position: fixed; inset: 0; background: var(--bg-color); z-index: 100;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px;
+    overflow-y: auto;
+  }
+  #startScreen h1 { font-family: 'Syne'; font-size: 36px; margin-bottom: 6px; font-weight: 800; text-align: center; }
+  .exam-config-card {
+    background: var(--glass-bg); border: 1px solid var(--glass-border);
+    padding: 28px; border-radius: 20px; margin: 24px 0; max-width: 580px; width: 100%;
+    backdrop-filter: blur(16px);
+  }
+  .form-row { margin-bottom: 16px; }
+  .form-row label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 0.04em; }
+  .form-select, .form-input {
+    width: 100%; padding: 12px 14px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--glass-border);
+    border-radius: 10px; color: white; font-family: 'DM Sans'; font-size: 14px; outline: none;
+  }
+  .rules-box {
+    background: rgba(0, 71, 171, 0.08); border: 1px solid rgba(0, 71, 171, 0.25);
+    border-radius: 10px; padding: 14px; margin-top: 16px; font-size: 13px; color: #bfdbfe; line-height: 1.5;
+  }
+
+  /* Results Screen */
+  #resultsScreen {
+    display: none; padding: 40px 20px; max-width: 900px; margin: 0 auto; width: 100%;
+    flex-direction: column; align-items: center; text-align: center;
+  }
+  .results-card {
+    background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 24px;
+    padding: 40px; width: 100%; backdrop-filter: blur(20px); box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+  }
+  .score-circle {
+    width: 140px; height: 140px; border-radius: 50%; border: 6px solid var(--blue);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    margin: 20px auto; background: rgba(0,71,171,0.1); box-shadow: 0 0 30px rgba(0,71,171,0.4);
+  }
+  .score-circle .score-num { font-size: 36px; font-family: 'Syne'; font-weight: 800; }
+  .score-circle .score-label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em; }
+
+  .gamification-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 24px 0; }
+  .g-stat { background: rgba(255,255,255,0.03); padding: 16px; border-radius: 12px; border: 1px solid var(--glass-border); }
+  .g-stat .stat-num { font-size: 24px; font-weight: 700; font-family: 'Syne'; color: #fff; margin-bottom: 2px; }
+  .g-stat .stat-name { font-size: 12px; color: var(--text-muted); }
+
+  /* Review Section */
+  .review-section { margin-top: 30px; text-align: left; }
+  .review-item {
+    background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border);
+    border-radius: 12px; padding: 20px; margin-bottom: 14px;
+  }
+  .review-q-title { font-family: 'Syne'; font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+  .review-ans-row { display: flex; gap: 14px; font-size: 14px; margin-bottom: 8px; }
+  .review-correct { color: var(--green); }
+  .review-wrong { color: var(--red); }
+  .review-explanation { background: rgba(0,71,171,0.1); padding: 10px 14px; border-radius: 8px; font-size: 13px; color: #93c5fd; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+  <!-- Start Screen & Security Check -->
+  <div id="startScreen">
+    <img src="logo.png" width="70" style="margin-bottom: 16px;">
+    <h1>National Standard Exam Simulator</h1>
+    <p style="color:var(--text-muted); font-size:15px;">JEE / GATE / Placement Real-Time Exam Environment</p>
+    
+    <div class="exam-config-card">
+      <div class="form-row">
+        <label>Exam Subject</label>
+        <select class="form-select" id="examSubject">
+          <option value="dsa">Data Structures & Algorithms (GATE / JEE CS)</option>
+          <option value="aptitude">Quantitative Aptitude & Logical Reasoning</option>
+          <option value="cs_fundamentals">Core CS (OS, DBMS, Networks)</option>
+        </select>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;" class="form-row">
+        <div>
+          <label>Difficulty Tier</label>
+          <select class="form-select" id="examDifficulty">
+            <option value="all">Mixed Realistic (1.5x XP)</option>
+            <option value="easy">Foundation / Easy (1.0x XP)</option>
+            <option value="medium">Intermediate / Medium (1.5x XP)</option>
+            <option value="hard">Advanced / Hard (2.0x XP)</option>
+          </select>
+        </div>
+        <div>
+          <label>Questions Count</label>
+          <select class="form-select" id="examCount">
+            <option value="5">5 Questions (Speed Test)</option>
+            <option value="8">8 Questions (Comprehensive)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row" style="display:flex; align-items:center; justify-content:space-between; margin-top:10px;">
+        <label style="margin:0; cursor:pointer;" for="negativeMarkingToggle">
+          Enable Negative Marking Scheme (+4 / -1)
+        </label>
+        <input type="checkbox" id="negativeMarkingToggle" checked style="width:18px; height:18px; cursor:pointer;">
+      </div>
+
+      <div class="rules-box">
+        <strong>🛡️ Secure Anti-Cheat Integrity Rules:</strong>
+        <ul style="margin-left: 20px; margin-top: 6px;">
+          <li>Full-screen mode enforced automatically</li>
+          <li>Tab switching & visibility loss tracked by proctor</li>
+          <li>3rd tab switch triggers immediate auto-submission</li>
+          <li>Per-question timer (60s default) with auto-submit on 00:00</li>
+        </ul>
+      </div>
+
+      <button class="btn btn-primary" id="startExamBtn" style="width:100%; justify-content:center; font-size:16px; margin-top:20px; padding:15px;">
+        <i class="fa-solid fa-lock"></i> Begin Monitored Examination
+      </button>
+    </div>
+  </div>
+
+  <!-- Anti-Cheat Overlay -->
+  <div id="cheatOverlay">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <h1>PROCTOR WARNING: TAB SWITCH DETECTED</h1>
+    <p>You navigated away from the exam environment. All focus loss events are recorded in your exam audit report.</p>
+    <p id="cheatWarningText" style="margin-top: 14px; font-weight:700; color: var(--orange); font-size: 18px;"></p>
+    <button class="btn btn-outline" id="resumeExamBtn" style="margin-top: 24px;">Return to Exam Workspace</button>
+  </div>
+
+  <!-- Main Quiz Area -->
+  <div id="quizArea" style="display: none; flex-direction: column; min-height: 100vh;">
+    <header class="quiz-header">
+      <div class="brand">
+        <img src="logo.png" width="30">
+        <span>PrepSetu <span style="color:var(--orange);">SecureExam</span></span>
+      </div>
+      <div class="timer" id="timer"><i class="fa-regular fa-clock"></i> <span id="timerText">05:00</span></div>
+    </header>
+
+    <div class="quiz-layout">
+      <!-- Main Question Pane -->
+      <div class="main-quiz-pane">
+        <div class="question-card" id="questionContainer">
+          <div class="q-meta">
+            <span>Question <span id="currentQNum">1</span> of <span id="totalQNum">5</span></span>
+            <span class="marking-badge" id="markingSchemeBadge">+4 / -1 Scheme</span>
+          </div>
+
+          <h2 class="q-text" id="questionText">Loading examination question...</h2>
+
+          <div class="options-grid" id="optionsGrid">
+            <!-- Options dynamically injected -->
+          </div>
+
+          <div class="footer-actions">
+            <button class="btn btn-mark" id="markReviewBtn"><i class="fa-solid fa-flag"></i> Mark for Review</button>
+            <div style="display:flex; gap:12px;">
+              <button class="btn btn-outline" id="prevBtn" disabled>Previous</button>
+              <button class="btn btn-primary" id="nextBtn">Next Question →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Side Palette Pane -->
+      <div class="side-palette-pane">
+        <div class="palette-card">
+          <div class="palette-title">
+            <span>Question Palette</span>
+            <span style="font-size:13px; color:var(--text-muted); font-weight:500;" id="paletteSummary">0/5 Done</span>
+          </div>
+          <div class="palette-grid" id="paletteGrid">
+            <!-- Palette numbers injected -->
+          </div>
+
+          <div class="palette-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:rgba(52,199,89,0.5); border:1px solid var(--green);"></div> Answered</div>
+            <div class="legend-item"><div class="legend-dot" style="background:rgba(138,43,226,0.5); border:1px solid var(--purple);"></div> Marked for Review</div>
+            <div class="legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.1);"></div> Unattempted</div>
+          </div>
+        </div>
+
+        <button class="btn btn-outline" id="submitExamEarlyBtn" style="width:100%; justify-content:center; color:var(--red); border-color:rgba(255,59,48,0.3);">
+          <i class="fa-solid fa-circle-check"></i> Submit Exam
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Screen -->
+  <div id="resultsScreen">
+    <div class="results-card">
+      <h1 style="font-family:'Syne'; font-size:32px; margin-bottom:4px;">Examination Complete</h1>
+      <p style="color:var(--text-muted); font-size:14px;" id="resultsSubtext">JEE / GATE Scoring Engine Evaluated</p>
+
+      <div class="score-circle" id="scoreCircle">
+        <div class="score-num" id="scorePercent">0%</div>
+        <div class="score-label">Accuracy</div>
+      </div>
+
+      <div class="gamification-stats">
+        <div class="g-stat">
+          <div class="stat-num" id="statMarks">0</div>
+          <div class="stat-name">Total Score</div>
+        </div>
+        <div class="g-stat">
+          <div class="stat-num" id="statCorrect">0/5</div>
+          <div class="stat-name">Correct Ratio</div>
+        </div>
+        <div class="g-stat">
+          <div class="stat-num" style="color:var(--orange);" id="statXP">+0</div>
+          <div class="stat-name">XP Earned</div>
+        </div>
+        <div class="g-stat">
+          <div class="stat-num" id="statWarnings">0</div>
+          <div class="stat-name">Tab Switches</div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:center; gap:14px; margin-bottom:30px; flex-wrap:wrap;">
+        <button class="btn btn-primary" id="sendMissedToRevBtn" style="background:linear-gradient(135deg, #8A2BE2, #4B0082); display:none;">
+          <i class="fa-solid fa-brain"></i> Send Missed Questions to Revision Queue
+        </button>
+        <button class="btn btn-outline" id="toggleReviewBtn">
+          <i class="fa-solid fa-list-check"></i> Review Question Analysis
+        </button>
+        <button class="btn btn-primary" onclick="window.location.href='dashboard.html'">
+          <i class="fa-solid fa-house"></i> Return to Dashboard
+        </button>
+      </div>
+
+      <!-- Detailed Review Mode -->
+      <div class="review-section" id="reviewSection" style="display:none;">
+        <h3 style="font-family:'Syne'; font-size:20px; margin-bottom:16px;">Detailed Solution Analysis</h3>
+        <div id="reviewList">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { StateManager } from './state-manager.js';
+    import { showToast, showConfirmDialog, playSound } from './ui-utils.js';
+
+    // State
+    let quizQuestions = [];
+    let currentQ = 0;
+    let selectedOptions = [];
+    let flaggedQuestions = new Set();
+    let questionTimes = [];
+    let qStartTime = Date.now();
+    let timerInterval = null;
+    let totalTimeSec = 300;
+    let timeLeft = 300;
+    let tabSwitchCount = 0;
+    let isExamActive = false;
+    let useNegativeMarking = true;
+    let subject = 'dsa';
+    let difficulty = 'all';
+
+    // Fallback static question bank if API offline
+    const LOCAL_FALLBACK_BANK = [
+      {
+        id: 'fb_1',
+        q: 'Which data structure operates on a First-In-First-Out (FIFO) discipline?',
+        options: ['Stack', 'Queue', 'Binary Search Tree', 'Hash Map'],
+        ans: 1,
+        explanation: 'A Queue adheres to FIFO principles where insertion happens at the rear and deletion at the front.'
+      },
+      {
+        id: 'fb_2',
+        q: 'What is the average time complexity of searching an element in a balanced AVL Tree?',
+        options: ['O(1)', 'O(log N)', 'O(N)', 'O(N log N)'],
+        ans: 1,
+        explanation: 'An AVL tree strictly maintains a balance factor between -1 and +1, guaranteeing logarithmic height O(log N).'
+      },
+      {
+        id: 'fb_3',
+        q: 'Which shortest path algorithm handles graphs with negative edge weights without getting trapped in cycles?',
+        options: ["Dijkstra's Algorithm", "Bellman-Ford Algorithm", "Prim's Algorithm", "Kruskal's Algorithm"],
+        ans: 1,
+        explanation: 'Bellman-Ford relaxes all edges |V|-1 times and can detect negative-weight cycles.'
+      },
+      {
+        id: 'fb_4',
+        q: 'Which condition is NOT necessary for a deadlock to occur in an operating system?',
+        options: ['Mutual Exclusion', 'Hold and Wait', 'No Preemption', 'Preemptive Resource Allocation'],
+        ans: 3,
+        explanation: "Coffman's four deadlock conditions are Mutual Exclusion, Hold and Wait, No Preemption, and Circular Wait."
+      },
+      {
+        id: 'fb_5',
+        q: 'A train 150m long is running at 54 km/h. How many seconds will it take to cross a telephone pole?',
+        options: ['8 sec', '10 sec', '12 sec', '15 sec'],
+        ans: 1,
+        explanation: 'Speed in m/s = 54 * (5/18) = 15 m/s. Time = 150 / 15 = 10 seconds.'
+      }
+    ];
+
+    // ── INITIALIZE ON LOAD ──
+    window.addEventListener('DOMContentLoaded', () => {
+      StateManager.init();
+
+      // Check query params (e.g. quiz.html?subject=aptitude)
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('subject')) {
+        document.getElementById('examSubject').value = urlParams.get('subject');
+      }
+
+      setupEventListeners();
+    });
+
+    function setupEventListeners() {
+      document.getElementById('startExamBtn').addEventListener('click', startExam);
+      document.getElementById('resumeExamBtn').addEventListener('click', resumeFromCheat);
+      document.getElementById('prevBtn').addEventListener('click', () => navigateQuestion(currentQ - 1));
+      document.getElementById('nextBtn').addEventListener('click', handleNextOrSubmit);
+      document.getElementById('markReviewBtn').addEventListener('click', toggleMarkForReview);
+      document.getElementById('submitExamEarlyBtn').addEventListener('click', confirmEarlySubmit);
+      document.getElementById('toggleReviewBtn').addEventListener('click', () => {
+        const rev = document.getElementById('reviewSection');
+        rev.style.display = rev.style.display === 'none' ? 'block' : 'none';
+      });
+
+      // Anti-Cheat: Visibility & Fullscreen Tracking
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('blur', handleWindowBlur);
+    }
+
+    // ── START EXAM ──
+    async function startExam() {
+      subject = document.getElementById('examSubject').value;
+      difficulty = document.getElementById('examDifficulty').value;
+      const count = parseInt(document.getElementById('examCount').value) || 5;
+      useNegativeMarking = document.getElementById('negativeMarkingToggle').checked;
+
+      // Request fullscreen safely (non-blocking)
+      try {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } catch (err) {
+        console.warn('Fullscreen request skipped.');
+      }
+
+      // Fetch questions from server API or fallback
+      try {
+        const res = await fetch(`/api/quiz?subject=${subject}&difficulty=${difficulty}&count=${count}`);
+        const json = await res.json();
+        if (json.ok && json.questions && json.questions.length > 0) {
+          quizQuestions = json.questions;
+        } else {
+          quizQuestions = LOCAL_FALLBACK_BANK.slice(0, count);
+        }
+      } catch (e) {
+        quizQuestions = LOCAL_FALLBACK_BANK.slice(0, count);
+      }
+
+      selectedOptions = new Array(quizQuestions.length).fill(null);
+      questionTimes = new Array(quizQuestions.length).fill(0);
+      flaggedQuestions.clear();
+      tabSwitchCount = 0;
+      currentQ = 0;
+      totalTimeSec = quizQuestions.length * 60; // 60 seconds per question
+      timeLeft = totalTimeSec;
+      isExamActive = true;
+
+      // Update UI
+      document.getElementById('startScreen').style.display = 'none';
+      document.getElementById('quizArea').style.display = 'flex';
+      document.getElementById('totalQNum').innerText = quizQuestions.length;
+      document.getElementById('markingSchemeBadge').innerText = useNegativeMarking ? '+4 / -1 JEE Scheme' : '+1 Standard';
+
+      renderPalette();
+      loadQuestion(0);
+      startTimer();
+      playSound('success');
+    }
+
+    // ── TIMER ──
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        const m = Math.floor(timeLeft / 60);
+        const s = timeLeft % 60;
+        const text = `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+        document.getElementById('timerText').innerText = text;
+
+        const timerEl = document.getElementById('timer');
+        if (timeLeft <= 60) {
+          timerEl.classList.add('danger');
+        }
+
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          showToast('Time expired! Auto-submitting your examination.', 'error', 'Timer Expired');
+          finishExam('timeout');
+        }
+      }, 1000);
+    }
+
+    // ── LOAD QUESTION ──
+    function loadQuestion(index) {
+      // Record time spent on previous question
+      const now = Date.now();
+      if (isExamActive) {
+        questionTimes[currentQ] += Math.round((now - qStartTime) / 1000);
+      }
+      qStartTime = now;
+
+      currentQ = index;
+      const q = quizQuestions[currentQ];
+
+      document.getElementById('currentQNum').innerText = currentQ + 1;
+      document.getElementById('questionText').innerText = q.q;
+
+      // Mark review state
+      const markBtn = document.getElementById('markReviewBtn');
+      if (flaggedQuestions.has(currentQ)) {
+        markBtn.classList.add('marked');
+        markBtn.innerHTML = '<i class="fa-solid fa-flag"></i> Flagged for Review';
+      } else {
+        markBtn.classList.remove('marked');
+        markBtn.innerHTML = '<i class="fa-regular fa-flag"></i> Mark for Review';
+      }
+
+      // Render options
+      const grid = document.getElementById('optionsGrid');
+      grid.innerHTML = '';
+      const letters = ['A', 'B', 'C', 'D'];
+
+      q.options.forEach((opt, idx) => {
+        const isSelected = selectedOptions[currentQ] === idx;
+        const optEl = document.createElement('div');
+        optEl.className = `option ${isSelected ? 'selected' : ''}`;
+        optEl.innerHTML = `
+          <div class="option-letter">${letters[idx]}</div>
+          <div style="flex:1;">${opt}</div>
+        `;
+        optEl.addEventListener('click', () => selectOption(idx));
+        grid.appendChild(optEl);
+      });
+
+      // Navigation buttons
+      document.getElementById('prevBtn').disabled = currentQ === 0;
+      const nextBtn = document.getElementById('nextBtn');
+      if (currentQ === quizQuestions.length - 1) {
+        nextBtn.innerHTML = 'Submit Examination <i class="fa-solid fa-check"></i>';
+        nextBtn.classList.remove('btn-outline');
+        nextBtn.classList.add('btn-primary');
+      } else {
+        nextBtn.innerHTML = 'Next Question →';
+      }
+
+      updatePalette();
+    }
+
+    function selectOption(optIndex) {
+      selectedOptions[currentQ] = optIndex;
+      loadQuestion(currentQ);
+      playSound('success');
+    }
+
+    function toggleMarkForReview() {
+      if (flaggedQuestions.has(currentQ)) {
+        flaggedQuestions.delete(currentQ);
+      } else {
+        flaggedQuestions.add(currentQ);
+      }
+      loadQuestion(currentQ);
+    }
+
+    function navigateQuestion(newIndex) {
+      if (newIndex >= 0 && newIndex < quizQuestions.length) {
+        loadQuestion(newIndex);
+      }
+    }
+
+    function handleNextOrSubmit() {
+      if (currentQ < quizQuestions.length - 1) {
+        navigateQuestion(currentQ + 1);
+      } else {
+        confirmEarlySubmit();
+      }
+    }
+
+    async function confirmEarlySubmit() {
+      const answeredCount = selectedOptions.filter(o => o !== null).length;
+      const unattempted = quizQuestions.length - answeredCount;
+      const msg = unattempted > 0
+        ? `You have ${unattempted} unattempted questions. Are you sure you want to finish and submit?`
+        : 'All questions answered. Ready to submit and receive final scores?';
+
+      const confirmed = await showConfirmDialog('Submit Examination?', msg, 'Yes, Submit', 'Keep Solving');
+      if (confirmed) {
+        finishExam('user_submit');
+      }
+    }
+
+    // ── PALETTE ──
+    function renderPalette() {
+      const grid = document.getElementById('paletteGrid');
+      grid.innerHTML = '';
+
+      quizQuestions.forEach((_, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'palette-btn';
+        btn.id = `pal_btn_${idx}`;
+        btn.innerText = idx + 1;
+        btn.addEventListener('click', () => navigateQuestion(idx));
+        grid.appendChild(btn);
+      });
+      updatePalette();
+    }
+
+    function updatePalette() {
+      let answeredCount = 0;
+      quizQuestions.forEach((_, idx) => {
+        const btn = document.getElementById(`pal_btn_${idx}`);
+        if (!btn) return;
+        btn.className = 'palette-btn';
+        if (idx === currentQ) btn.classList.add('current');
+        if (selectedOptions[idx] !== null) {
+          btn.classList.add('answered');
+          answeredCount++;
+        }
+        if (flaggedQuestions.has(idx)) {
+          btn.classList.add('flagged');
+        }
+      });
+      document.getElementById('paletteSummary').innerText = `${answeredCount}/${quizQuestions.length} Done`;
+    }
+
+    // ── ANTI-CHEAT HANDLING ──
+    function handleVisibilityChange() {
+      if (!isExamActive) return;
+      if (document.hidden) {
+        triggerCheatWarning();
+      }
+    }
+
+    function handleWindowBlur() {
+      if (!isExamActive) return;
+      triggerCheatWarning();
+    }
+
+    function triggerCheatWarning() {
+      tabSwitchCount++;
+      const overlay = document.getElementById('cheatOverlay');
+      const text = document.getElementById('cheatWarningText');
+      overlay.style.display = 'flex';
+      playSound('error');
+
+      if (tabSwitchCount >= 3) {
+        text.innerText = 'CRITICAL VIOLATION (3/3): Proctor auto-submitting your examination now.';
+        setTimeout(() => {
+          overlay.style.display = 'none';
+          finishExam('anti_cheat_lockout');
+        }, 2000);
+      } else {
+        text.innerText = `Warning ${tabSwitchCount} of 3: Do not leave the exam window. At 3 warnings, exam auto-submits!`;
+      }
+    }
+
+    window.resumeFromCheat = function() {
+      if (tabSwitchCount < 3) {
+        document.getElementById('cheatOverlay').style.display = 'none';
+        try {
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          }
+        } catch(e) {}
+      }
+    };
+
+    // ── FINISH EXAM & EVALUATION ──
+    async function finishExam(reason = 'completed') {
+      isExamActive = false;
+      if (timerInterval) clearInterval(timerInterval);
+
+      if (document.fullscreenElement) {
+        try {
+          await document.exitFullscreen();
+        } catch(e) {}
+      }
+
+      // Calculate JEE / Standard Score
+      let correct = 0;
+      let incorrect = 0;
+      let unattempted = 0;
+      const missedQuestions = [];
+
+      selectedOptions.forEach((ans, i) => {
+        const q = quizQuestions[i];
+        if (ans === null) {
+          unattempted++;
+        } else if (ans === q.ans) {
+          correct++;
+        } else {
+          incorrect++;
+          missedQuestions.push(q);
+        }
+      });
+
+      // Scoring formulas:
+      // JEE: +4 correct, -1 wrong, 0 unattempted
+      // Standard: +1 correct, 0 wrong
+      let scoreMarks = 0;
+      let maxMarks = 0;
+
+      if (useNegativeMarking) {
+        scoreMarks = (correct * 4) - (incorrect * 1);
+        maxMarks = quizQuestions.length * 4;
+      } else {
+        scoreMarks = correct;
+        maxMarks = quizQuestions.length;
+      }
+
+      const accuracy = (correct + incorrect) > 0 ? Math.round((correct / (correct + incorrect)) * 100) : 0;
+      const durationSec = totalTimeSec - timeLeft;
+
+      // XP Multiplier based on difficulty
+      let diffMultiplier = 1.0;
+      if (difficulty === 'medium' || difficulty === 'all') diffMultiplier = 1.5;
+      if (difficulty === 'hard') diffMultiplier = 2.0;
+
+      const baseXP = correct * 50;
+      const earnedXP = Math.round(baseXP * diffMultiplier);
+
+      // Record in StateManager
+      const record = {
+        id: 'q_' + Date.now().toString(36),
+        subject,
+        difficulty,
+        score: scoreMarks,
+        maxScore: maxMarks,
+        total: quizQuestions.length,
+        correct,
+        incorrect,
+        unattempted,
+        negativeScore: scoreMarks,
+        accuracy,
+        durationSec,
+        date: new Date().toISOString(),
+        antiCheatWarnings: tabSwitchCount
+      };
+
+      StateManager.recordQuizResult(record);
+      StateManager.addXP(earnedXP, 'Quiz Completion');
+
+      // Update Results UI
+      document.getElementById('quizArea').style.display = 'none';
+      document.getElementById('resultsScreen').style.display = 'flex';
+
+      document.getElementById('scorePercent').innerText = `${accuracy}%`;
+      document.getElementById('statMarks').innerText = `${scoreMarks}/${maxMarks}`;
+      document.getElementById('statCorrect').innerText = `${correct}/${quizQuestions.length}`;
+      document.getElementById('statXP').innerText = `+${earnedXP}`;
+      document.getElementById('statWarnings').innerText = tabSwitchCount;
+
+      const circle = document.getElementById('scoreCircle');
+      if (accuracy >= 80) {
+        circle.style.borderColor = 'var(--green)';
+        playSound('achievement');
+        triggerConfetti();
+      } else if (accuracy >= 50) {
+        circle.style.borderColor = 'var(--blue)';
+        playSound('success');
+      } else {
+        circle.style.borderColor = 'var(--red)';
+        playSound('error');
+      }
+
+      // If missed questions exist, show button to send to revision queue
+      const sendRevBtn = document.getElementById('sendMissedToRevBtn');
+      if (missedQuestions.length > 0) {
+        sendRevBtn.style.display = 'inline-flex';
+        sendRevBtn.onclick = () => {
+          const revQueue = StateManager.get('revisionQueue', []);
+          let addedCount = 0;
+
+          missedQuestions.forEach(mq => {
+            // Avoid duplicate additions
+            if (!revQueue.some(r => r.question === mq.q)) {
+              revQueue.push({
+                id: 'rev_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4),
+                subject,
+                question: mq.q,
+                options: mq.options,
+                correct: mq.ans,
+                explanation: mq.explanation || 'Review fundamental definitions and edge constraints.',
+                intervalDays: 1,
+                repetitions: 0,
+                easeFactor: 2.5,
+                nextReviewDate: new Date().toISOString().split('T')[0]
+              });
+              addedCount++;
+            }
+          });
+
+          StateManager.update('revisionQueue', revQueue);
+          showToast(`Added ${addedCount} missed questions to your Spaced Repetition deck!`, 'success', 'Revision Sync');
+          sendRevBtn.disabled = true;
+          sendRevBtn.innerHTML = '<i class="fa-solid fa-check"></i> Added to Revision Queue';
+        };
+      } else {
+        sendRevBtn.style.display = 'none';
+      }
+
+      // Populate Review Section
+      renderReviewList();
+    }
+
+    function renderReviewList() {
+      const container = document.getElementById('reviewList');
+      container.innerHTML = '';
+      const letters = ['A', 'B', 'C', 'D'];
+
+      quizQuestions.forEach((q, idx) => {
+        const userAns = selectedOptions[idx];
+        const isCorrect = userAns === q.ans;
+        const item = document.createElement('div');
+        item.className = 'review-item';
+
+        item.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div class="review-q-title">Q${idx + 1}. ${q.q}</div>
+            <span style="font-size:12px; font-weight:700; color:${isCorrect ? 'var(--green)' : userAns === null ? 'var(--text-muted)' : 'var(--red)'}">
+              ${isCorrect ? '✓ CORRECT (+4)' : userAns === null ? '○ SKIPPED (0)' : '✕ WRONG (-1)'}
+            </span>
+          </div>
+          <div class="review-ans-row">
+            <span>Your Choice: <strong>${userAns !== null ? `${letters[userAns]}) ${q.options[userAns]}` : 'None (Skipped)'}</strong></span>
+            <span>Correct: <strong style="color:var(--green);">${letters[q.ans]}) ${q.options[q.ans]}</strong></span>
+          </div>
+          <div class="review-explanation">
+            <strong>Explanation:</strong> ${q.explanation || 'Standard exam syllabus derivation.'}
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function triggerConfetti() {
+      if (typeof confetti !== 'function') return;
+      const duration = 2.5 * 1000;
+      const end = Date.now() + duration;
+
+      (function frame() {
+        confetti({ particleCount: 4, angle: 60, spread: 55, origin: { x: 0 } });
+        confetti({ particleCount: 4, angle: 120, spread: 55, origin: { x: 1 } });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      })();
+    }
+
+    // ── PWA SERVICE WORKER REGISTRATION ──
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker
+          .register('./service-worker.js')
+          .catch(err => console.warn('[PWA] SW register error:', err));
+      });
+    }
+  </script>
+</body>
+</html>
